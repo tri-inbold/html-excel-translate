@@ -777,7 +777,12 @@
                     }
                 }
 
-                const langZipBlob = await langZip.generateAsync({ type: 'blob' });
+                const langZipBlob = await langZip.generateAsync({
+				    type: 'blob',
+				    compression: 'DEFLATE',
+				    compressionOptions: { level: 5 }
+				});
+				
                 const zipName = file.name.replace('.zip', '') + `_${lang}.zip`;
                 
                 saveAs(langZipBlob, zipName);
