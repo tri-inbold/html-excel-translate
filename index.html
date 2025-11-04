@@ -700,33 +700,80 @@
         }
 
         async function processLocalization() {
-            showProgress('Processing localization...');
-            clearResults();
-
-            try {
-                const results = [];
-                const selectedLangs = Array.from(state.selectedLanguages);
-
-                for (const htmlFile of state.htmlFiles) {
-                    const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
-                    const isZip = fileExtension === '.zip';
-
-                    if (isZip) {
-                        const zipResults = await processZipFile(htmlFile, selectedLangs);
-                        results.push(...zipResults);
-                    } else {
-                        const htmlResults = await processHtmlFile(htmlFile, selectedLangs);
-                        results.push(...htmlResults);
-                    }
-                }
-
-                showResults(results);
-                hideProgress();
-            } catch (error) {
-                showError('resultsContainer', `Processing error: ${error.message}`);
-                hideProgress();
-            }
-        }
+		    showProgress('Processing localization...');
+		    clearResults();
+		
+		    try {
+		        const results = [];
+		        const selectedLangs = Array.from(state.selectedLanguages);
+		        const singleZip = document.getElementById('singleZip').checked;
+		
+		        if (singleZip) {
+		            const masterZip = new JSZip();
+		
+		            for (const htmlFile of state.htmlFiles) {
+		                const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
+		                const isZip = fileExtension === '.zip';
+		                const baseName = htmlFile.name.replace(/\.[^/.]+$/, '');
+		
+		                if (isZip) {
+		                    const zipContent = await new JSZip().loadAsync(htmlFile);
+		                    for (const lang of selectedLangs) {
+		                        const langFolder = masterZip.folder(`${baseName}_${lang}`);
+		                        for (const [fileName, fileData] of Object.entries(zipContent.files)) {
+		                            if (fileData.dir) continue;
+		
+		                            if (fileName.toLowerCase().endsWith('.html')) {
+		                                const htmlContent = await fileData.async('string');
+		                                const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+		                                langFolder.file(fileName, localizedHtml);
+		                            } else {
+		                                const content = await fileData.async('uint8array');
+		                                langFolder.file(fileName, content);
+		                            }
+		                        }
+		                    }
+		                } else {
+		                    const htmlContent = await htmlFile.text();
+		                    for (const lang of selectedLangs) {
+		                        const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+		                        const fileName = `${baseName}_${lang}.html`;
+		                        masterZip.file(fileName, localizedHtml);
+		                    }
+		                }
+		            }
+		
+		            const blob = await masterZip.generateAsync({
+		                type: 'blob',
+		                compression: 'DEFLATE',
+		                compressionOptions: { level: 9 }
+		            });
+		            saveAs(blob, 'All_Languages.zip');
+		            results.push({ name: 'All_Languages.zip', type: 'zip' });
+		        } 
+		        else {
+		            // old behavior — each lang exported separately
+		            for (const htmlFile of state.htmlFiles) {
+		                const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
+		                const isZip = fileExtension === '.zip';
+		
+		                if (isZip) {
+		                    const zipResults = await processZipFile(htmlFile, selectedLangs);
+		                    results.push(...zipResults);
+		                } else {
+		                    const htmlResults = await processHtmlFile(htmlFile, selectedLangs);
+		                    results.push(...htmlResults);
+		                }
+		            }
+		        }
+		
+		        showResults(results);
+		        hideProgress();
+		    } catch (error) {
+		        showError('resultsContainer', `Processing error: ${error.message}`);
+		        hideProgress();
+		    }
+		}
 
         async function processHtmlFile(file, selectedLangs) {
             return new Promise((resolve) => {
