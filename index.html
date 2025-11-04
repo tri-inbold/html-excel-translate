@@ -24,7 +24,6 @@
         }
         
         .container {
-            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
@@ -56,10 +55,11 @@
         }
         
         .right-column {
-            flex: 1;
-            padding: 30px;
-        }
-        
+			flex: 1;
+			padding: 30px;
+			overflow-x: hidden;
+			overflow-y: auto;
+		}
         .section-title {
             font-size: 15px;
             font-weight: 600;
@@ -171,7 +171,7 @@
         }
         
         .options {
-            margin: 15px 0px;
+            margin: 0px 0px 15px 0px;
             padding: 16px;
             background: #f8fafc;
             border-radius: 10px;
@@ -251,22 +251,57 @@
             cursor: pointer;
         }
         
-        .preview-table {
-            overflow-x: auto;
-            margin-top: 15px;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-        }
-        
+		.preview-table {
+			display: block;
+			overflow-x: auto;
+			overflow-y: hidden;
+			margin-top: 15px;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			background: white;
+			max-width: 100%;
+			box-sizing: border-box;
+			padding-bottom: 6px; /* 🔹 thêm khoảng cách dưới để scrollbar tách nhẹ ra */
+			scrollbar-color: #cbd5e1 #f8fafc;
+			scrollbar-width: thin;
+		}
+
+		.preview-table::-webkit-scrollbar {
+			height: 8px;
+			margin-top: 3px; /* 🔹 tạo khoảng hở nhỏ */
+		}
+
+		.preview-table::-webkit-scrollbar-track {
+			background: #f8fafc;
+			border-radius: 8px;
+		}
+
+		.preview-table::-webkit-scrollbar-thumb {
+			background-color: #cbd5e1;
+			border-radius: 8px;
+		}
+
+		.preview-table::-webkit-scrollbar-thumb:hover {
+			background-color: #94a3b8;
+		}
+		.preview-table table {
+			width: max-content;
+			min-width: 100%;
+			border-collapse: collapse;
+			font-size: 13px;
+			table-layout: auto;
+		}
+		
         table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            table-layout: fixed;
-        }
+			width: max-content;
+			border-collapse: collapse;
+			font-size: 13px;
+			table-layout: auto;
+		}
         
         th, td {
-            padding: 10px;
+            font-size: 0.8em;
+			padding: 10px;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
             overflow: hidden;
@@ -280,6 +315,7 @@
             color: #6366f1;
             position: sticky;
             top: 0;
+			z-index: 1;
         }
         
         tr:last-child td {
@@ -380,13 +416,28 @@
                 border-bottom: 1px solid #e2e8f0;
             }
         }
+		
+		.remove-file-btn {
+			background: transparent;
+			border: none;
+			color: #94a3b8;
+			font-size: 16px;
+			cursor: pointer;
+			margin-right: 10px;
+			transition: color 0.2s ease;
+		}
+
+		.remove-file-btn:hover {
+			color: #ef4444;
+		}
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="main-content">
             <div class="left-column">
-                <h2 class="section-title">1. Upload HTML or ZIP</h2>
+                <h2 class="section-title">Upload HTML or ZIP</h2>
                 <div class="drop-zone" id="htmlDropZone">
                     <div class="drop-zone-icon">📄</div>
                     <div class="drop-zone-text">
@@ -405,7 +456,7 @@
                     </div>
                     <div class="option-item">
                         <input type="checkbox" id="singleZip" checked>
-                        <label for="singleZip">Download all languages in one ZIP</label>
+                        <label for="singleZip">Download all into one ZIP</label>
                     </div>
                 </div>
                 
@@ -416,7 +467,7 @@
                 <div id="progressContainer"></div>
             </div>
             <div class="right-column">
-			                <h2 class="section-title">2. Upload Translation Table <a style="text-decoration: none; color: gray; " href="sample.xlsx" download>(sample XLSX)</a></h2>
+			                <h2 class="section-title">Upload Translation Table <a style="text-decoration: none; color: gray; " href="sample.xlsx" download>(sample XLSX)</a></h2>
 
                 <div class="drop-zone" id="xlsxDropZone">
                     <div class="drop-zone-icon">📊</div>
@@ -429,10 +480,14 @@
                 
                 <div id="xlsxFileList" class="file-list"></div>
                 
-                <div id="languagesContainer" class="languages-container" style="display: none;">
-                    <div class="languages-label">All Languages:</div>
-                    <div class="language-tags" id="languageTags"></div>
-                </div>
+				<div id="languagesContainer" class="languages-container" style="display: none;">
+					<div class="languages-label">
+						<button id="selectAllBtn" style="font-size:12px; background:#6366f1; color:white; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;">
+							Deselect All Languages
+						</button>
+					</div>
+					<div class="language-tags" id="languageTags"></div>
+				</div>
                 
                 <div id="xlsxPreview"></div>
                 <div id="resultsContainer"></div>
@@ -512,14 +567,26 @@
             fileList.innerHTML = '';
             
             state.htmlFiles.forEach((file, index) => {
-                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-                fileList.innerHTML += `
-                    <div class="file-item">
-                        <span class="file-name">${file.name}</span>
-                        <span class="file-type">${fileExtension === '.zip' ? 'ZIP' : 'HTML'}</span>
-                    </div>
-                `;
-            });
+			const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+			fileList.innerHTML += `
+				<div class="file-item" data-index="${index}">
+					<button class="remove-file-btn" title="Remove file">×</button>
+					<span class="file-name">${file.name}</span>
+					<span class="file-type">${fileExtension === '.zip' ? 'ZIP' : 'HTML'}</span>
+				</div>
+			`;
+		});
+
+		fileList.querySelectorAll('.remove-file-btn').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				const item = e.target.closest('.file-item');
+				const index = parseInt(item.getAttribute('data-index'));
+				state.htmlFiles.splice(index, 1);
+				item.remove();
+				checkReadyState();
+			});
+		});
+
 
             checkReadyState();
             clearResults();
@@ -623,49 +690,76 @@
         }
 
         function displayLanguageTags() {
-            const container = document.getElementById('languagesContainer');
-            const tagsContainer = document.getElementById('languageTags');
-            
-            container.style.display = 'block';
-            tagsContainer.innerHTML = '';
-            
-            state.languages.forEach(lang => {
-                const tag = document.createElement('div');
-                tag.className = 'language-tag' + (state.selectedLanguages.has(lang) ? ' active' : '');
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.checked = state.selectedLanguages.has(lang);
-                checkbox.id = `lang-${lang}`;
-                
-                checkbox.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        state.selectedLanguages.add(lang);
-                        tag.classList.add('active');
-                    } else {
-                        state.selectedLanguages.delete(lang);
-                        tag.classList.remove('active');
-                    }
-                    checkReadyState();
-                });
-                
-                const label = document.createElement('label');
-                label.textContent = lang;
-                label.setAttribute('for', `lang-${lang}`);
-                label.style.cursor = 'pointer';
-                
-                tag.appendChild(checkbox);
-                tag.appendChild(label);
-                
-                tag.addEventListener('click', (e) => {
-                    if (e.target !== checkbox) {
-                        checkbox.click();
-                    }
-                });
-                
-                tagsContainer.appendChild(tag);
-            });
-        }
+			const container = document.getElementById('languagesContainer');
+			const tagsContainer = document.getElementById('languageTags');
+			
+			container.style.display = 'block';
+			tagsContainer.innerHTML = '';
+			
+			state.languages.forEach(lang => {
+				const tag = document.createElement('div');
+				tag.className = 'language-tag' + (state.selectedLanguages.has(lang) ? ' active' : '');
+				tag.textContent = lang;
+
+				tag.addEventListener('click', () => {
+					if (state.selectedLanguages.has(lang)) {
+						state.selectedLanguages.delete(lang);
+						tag.classList.remove('active');
+					} else {
+						state.selectedLanguages.add(lang);
+						tag.classList.add('active');
+					}
+					checkReadyState();
+				});
+
+				tagsContainer.appendChild(tag);
+			});
+
+			const selectAllBtn = document.getElementById('selectAllBtn');
+			let allSelected = false;
+
+			selectAllBtn.onclick = () => {
+				allSelected = !allSelected;
+				if (allSelected) {
+					state.selectedLanguages = new Set(state.languages);
+					selectAllBtn.textContent = "Deselect All Languages";
+				} else {
+					state.selectedLanguages.clear();
+					selectAllBtn.textContent = "Select All Languages";
+				}
+
+				document.querySelectorAll('#languageTags .language-tag').forEach(tag => {
+					if (allSelected) tag.classList.add('active');
+					else tag.classList.remove('active');
+				});
+
+				checkReadyState();
+			};
+		}
+
+
+		const selectAllBtn = document.getElementById('selectAllBtn');
+		let allSelected = false;
+
+		selectAllBtn.onclick = () => {
+			allSelected = !allSelected;
+			if (allSelected) {
+				state.selectedLanguages = new Set(state.languages);
+				selectAllBtn.textContent = "Deselect All";
+			} else {
+				state.selectedLanguages.clear();
+				selectAllBtn.textContent = "Select All";
+			}
+
+			document.querySelectorAll('#languageTags .language-tag').forEach((tag, i) => {
+				const checkbox = tag.querySelector('input[type="checkbox"]');
+				checkbox.checked = allSelected;
+				if (allSelected) tag.classList.add('active');
+				else tag.classList.remove('active');
+			});
+
+			checkReadyState();
+		};
 
         function displayXlsxPreview(data, headers) {
             const preview = document.getElementById('xlsxPreview');
@@ -752,7 +846,6 @@
 		            results.push({ name: 'All_Languages.zip', type: 'zip' });
 		        } 
 		        else {
-		            // old behavior — each lang exported separately
 		            for (const htmlFile of state.htmlFiles) {
 		                const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
 		                const isZip = fileExtension === '.zip';
