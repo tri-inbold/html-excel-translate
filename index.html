@@ -802,50 +802,68 @@
 		        const selectedLangs = Array.from(state.selectedLanguages);
 		        const singleZip = document.getElementById('singleZip').checked;
 		
-		        if (singleZip) {
-		            const masterZip = new JSZip();
-		
-		            for (const htmlFile of state.htmlFiles) {
-		                const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
-		                const isZip = fileExtension === '.zip';
-		                const baseName = htmlFile.name.replace(/\.[^/.]+$/, '');
-		
-		                if (isZip) {
-						    const zipContent = await new JSZip().loadAsync(htmlFile);
-						    for (const lang of selectedLangs) {
-						        const langFolder = masterZip.folder(`All_Languages/${lang}/${baseName}`);
-						        for (const [fileName, fileData] of Object.entries(zipContent.files)) {
-						            if (fileData.dir) continue;
-						
-						            if (fileName.toLowerCase().endsWith('.html')) {
-						                const htmlContent = await fileData.async('string');
-						                const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
-						                langFolder.file(fileName, localizedHtml);
-						            } else {
-						                const content = await fileData.async('uint8array');
-						                langFolder.file(fileName, content);
-						            }
-						        }
-						    }
-						} else {
-		                    const htmlContent = await htmlFile.text();
-							for (const lang of selectedLangs) {
-								const langFolder = masterZip.folder(`All_Languages/${lang}`);
-								const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
-								langFolder.file(`${baseName}.html`, localizedHtml);
-							}
+				if (singleZip) {
+					const masterZip = new JSZip();
 
-		                }
-		            }
-		
-		            const blob = await masterZip.generateAsync({
-		                type: 'blob',
-		                compression: 'DEFLATE',
-		                compressionOptions: { level: 9 }
-		            });
-		            saveAs(blob, 'All_Languages.zip');
-		            results.push({ name: 'All_Languages.zip', type: 'zip' });
-		        } 
+					for (const htmlFile of state.htmlFiles) {
+						const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
+						const isZip = fileExtension === '.zip';
+						const baseName = htmlFile.name.replace(/\.[^/.]+$/, '');
+
+						if (isZip) {
+							const zipContent = await new JSZip().loadAsync(htmlFile);
+
+							for (const lang of selectedLangs) {
+								const bannerZip = new JSZip();
+
+								for (const [fileName, fileData] of Object.entries(zipContent.files)) {
+									if (fileData.dir) continue;
+
+									if (fileName.toLowerCase().endsWith('.html')) {
+										const htmlContent = await fileData.async('string');
+										const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+										bannerZip.file(fileName, localizedHtml);
+									} else {
+										const content = await fileData.async('uint8array');
+										bannerZip.file(fileName, content);
+									}
+								}
+
+								const bannerBlob = await bannerZip.generateAsync({
+									type: 'uint8array',
+									compression: 'DEFLATE',
+									compressionOptions: { level: 5 }
+								});
+
+								masterZip.file(`All_Languages/${lang}/${baseName}.zip`, bannerBlob);
+							}
+						} else {
+							const htmlContent = await htmlFile.text();
+							for (const lang of selectedLangs) {
+								const bannerZip = new JSZip();
+								const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+								bannerZip.file(`${baseName}.html`, localizedHtml);
+
+								const bannerBlob = await bannerZip.generateAsync({
+									type: 'uint8array',
+									compression: 'DEFLATE',
+									compressionOptions: { level: 5 }
+								});
+
+								masterZip.file(`All_Languages/${lang}/${baseName}.zip`, bannerBlob);
+							}
+						}
+					}
+
+					const blob = await masterZip.generateAsync({
+						type: 'blob',
+						compression: 'DEFLATE',
+						compressionOptions: { level: 5 }
+					});
+					saveAs(blob, 'All_Languages.zip');
+					results.push({ name: 'All_Languages.zip', type: 'zip' });
+				}
+
 		        else {
 		            for (const htmlFile of state.htmlFiles) {
 		                const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
