@@ -811,29 +811,30 @@
 		                const baseName = htmlFile.name.replace(/\.[^/.]+$/, '');
 		
 		                if (isZip) {
-		                    const zipContent = await new JSZip().loadAsync(htmlFile);
-		                    for (const lang of selectedLangs) {
-		                        const langFolder = masterZip.folder(`${baseName}_${lang}`);
-		                        for (const [fileName, fileData] of Object.entries(zipContent.files)) {
-		                            if (fileData.dir) continue;
-		
-		                            if (fileName.toLowerCase().endsWith('.html')) {
-		                                const htmlContent = await fileData.async('string');
-		                                const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
-		                                langFolder.file(fileName, localizedHtml);
-		                            } else {
-		                                const content = await fileData.async('uint8array');
-		                                langFolder.file(fileName, content);
-		                            }
-		                        }
-		                    }
-		                } else {
+						    const zipContent = await new JSZip().loadAsync(htmlFile);
+						    for (const lang of selectedLangs) {
+						        const langFolder = masterZip.folder(`All_Languages/${lang}/${baseName}`);
+						        for (const [fileName, fileData] of Object.entries(zipContent.files)) {
+						            if (fileData.dir) continue;
+						
+						            if (fileName.toLowerCase().endsWith('.html')) {
+						                const htmlContent = await fileData.async('string');
+						                const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+						                langFolder.file(fileName, localizedHtml);
+						            } else {
+						                const content = await fileData.async('uint8array');
+						                langFolder.file(fileName, content);
+						            }
+						        }
+						    }
+						} else {
 		                    const htmlContent = await htmlFile.text();
-		                    for (const lang of selectedLangs) {
-		                        const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
-		                        const fileName = `${baseName}_${lang}.html`;
-		                        masterZip.file(fileName, localizedHtml);
-		                    }
+							for (const lang of selectedLangs) {
+								const langFolder = masterZip.folder(`All_Languages/${lang}`);
+								const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+								langFolder.file(`${baseName}.html`, localizedHtml);
+							}
+
 		                }
 		            }
 		
