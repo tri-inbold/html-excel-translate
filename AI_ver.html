@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>html-excel-translate v1.3 - AI Translation</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8fafc;
+            padding: 20px;
+            color: #1e293b;
+        }
+        
+        .container {
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 24px 30px;
+        }
+        
+        header h1 {
+            font-size: 22px;
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .main-content {
+            display: flex;
+            min-height: 500px;
+        }
+        
+        .left-column {
+            flex: 0 0 33.333%;
+            padding: 30px;
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .right-column {
+			flex: 1;
+			padding: 30px;
+			overflow-x: hidden;
+			overflow-y: auto;
+		}
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #6366f1;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+            margin-bottom: 20px;
+        }
+        
+        .drop-zone:hover {
+            border-color: #6366f1;
+            background: #f5f3ff;
+        }
+        
+        .drop-zone.drag-over {
+            border-color: #6366f1;
+            background: #eef2ff;
+            transform: scale(1.01);
+        }
+        
+        .drop-zone-icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
+        
+        .drop-zone-text {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .drop-zone-text small {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+        
+        .file-list {
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #334155;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .file-type {
+            background: #6366f1;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .adapt-button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .adapt-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .adapt-button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            color: #94a3b8;
+        }
+        
+        .options {
+            margin: 0px 0px 15px 0px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .option-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .option-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .option-item label {
+            font-size: 13px;
+            cursor: pointer;
+            color: #475569;
+        }
+        
+        .languages-container {
+            margin-top: 15px;
+        }
+        
+        .languages-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 10px;
+        }
+        
+        .language-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .language-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4338ca;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        .language-tag:hover {
+            background: #e0e7ff;
+            border-color: #a5b4fc;
+        }
+        
+        .language-tag.active {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: white;
+        }
+        
+        .language-tag input[type="checkbox"] {
+            margin-right: 6px;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+        
+		.preview-table {
+			display: block;
+			overflow-x: auto;
+			overflow-y: hidden;
+			margin-top: 15px;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			background: white;
+			max-width: 100%;
+			box-sizing: border-box;
+			padding-bottom: 6px;
+			scrollbar-color: #cbd5e1 #f8fafc;
+			scrollbar-width: thin;
+		}
+
+		.preview-table::-webkit-scrollbar {
+			height: 8px;
+			margin-top: 3px;
+		}
+
+		.preview-table::-webkit-scrollbar-track {
+			background: #f8fafc;
+			border-radius: 8px;
+		}
+
+		.preview-table::-webkit-scrollbar-thumb {
+			background-color: #cbd5e1;
+			border-radius: 8px;
+		}
+
+		.preview-table::-webkit-scrollbar-thumb:hover {
+			background-color: #94a3b8;
+		}
+		.preview-table table {
+			width: max-content;
+			min-width: 100%;
+			border-collapse: collapse;
+			font-size: 13px;
+			table-layout: auto;
+		}
+		
+        table {
+			width: max-content;
+			border-collapse: collapse;
+			font-size: 13px;
+			table-layout: auto;
+		}
+        
+        th, td {
+            font-size: 0.8em;
+			padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #6366f1;
+            position: sticky;
+            top: 0;
+			z-index: 1;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0fdf4;
+            border-radius: 10px;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .results h3 {
+            margin-bottom: 15px;
+            color: #15803d;
+            font-size: 16px;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #dcfce7;
+        }
+        
+        .download-link {
+            background: #6366f1;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .download-link:hover {
+            background: #4f46e5;
+        }
+        
+        .progress {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 3px solid #f1f5f9;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+            border: 1px solid #fecaca;
+        }
+        
+        .info-message {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+            border: 1px solid #bfdbfe;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .left-column {
+                flex: none;
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+        }
+		
+		.remove-file-btn {
+			background: transparent;
+			border: none;
+			color: #94a3b8;
+			font-size: 16px;
+			cursor: pointer;
+			margin-right: 10px;
+			transition: color 0.2s ease;
+		}
+
+		.remove-file-btn:hover {
+			color: #ef4444;
+		}
+
+		.ai-translate-btn {
+			background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+			color: white;
+			border: none;
+			border-radius: 8px;
+			padding: 8px 16px;
+			font-size: 13px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.ai-translate-btn:hover:not(:disabled) {
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+		}
+
+		.ai-translate-btn:disabled {
+			background: #cbd5e1;
+			cursor: not-allowed;
+		}
+
+		.ai-translate-btn.download-mode {
+			background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+		}
+
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000;
+		}
+
+		.modal-content {
+			background: white;
+			border-radius: 12px;
+			padding: 30px;
+			max-width: 700px;
+			max-height: 80vh;
+			overflow-y: auto;
+			box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+		}
+
+		.modal-header {
+			font-size: 20px;
+			font-weight: 600;
+			margin-bottom: 20px;
+			color: #1e293b;
+		}
+
+		.language-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+			gap: 10px;
+			margin-bottom: 20px;
+		}
+
+		.language-checkbox {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 10px;
+			background: #f8fafc;
+			border: 2px solid #e2e8f0;
+			border-radius: 8px;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			font-size: 13px;
+			font-weight: 500;
+		}
+
+		.language-checkbox:hover {
+			background: #eef2ff;
+			border-color: #6366f1;
+		}
+
+		.language-checkbox.selected {
+			background: #6366f1;
+			border-color: #6366f1;
+			color: white;
+		}
+
+		.language-checkbox input {
+			display: none;
+		}
+
+		.modal-actions {
+			display: flex;
+			gap: 10px;
+			justify-content: flex-end;
+			margin-top: 20px;
+		}
+
+		.modal-btn {
+			padding: 10px 20px;
+			border: none;
+			border-radius: 8px;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.modal-btn-cancel {
+			background: #f1f5f9;
+			color: #64748b;
+		}
+
+		.modal-btn-cancel:hover {
+			background: #e2e8f0;
+		}
+
+		.modal-btn-confirm {
+			background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+			color: white;
+		}
+
+		.modal-btn-confirm:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+		}
+
+		.translation-progress {
+			margin-top: 20px;
+			padding: 15px;
+			background: #f0fdf4;
+			border: 1px solid #bbf7d0;
+			border-radius: 8px;
+		}
+
+		.progress-bar {
+			width: 100%;
+			height: 8px;
+			background: #e2e8f0;
+			border-radius: 4px;
+			overflow: hidden;
+			margin-top: 10px;
+		}
+
+		.progress-bar-fill {
+			height: 100%;
+			background: linear-gradient(90deg, #10b981, #059669);
+			transition: width 0.3s ease;
+		}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="left-column">
+                <h2 class="section-title">Upload HTML or ZIP</h2>
+                <div class="drop-zone" id="htmlDropZone">
+                    <div class="drop-zone-icon">📄</div>
+                    <div class="drop-zone-text">
+                        Drag & drop .html or .zip file(s) here<br>
+                        <small>or click to browse</small>
+                    </div>
+                </div>
+                <input type="file" id="htmlFileInput" accept=".html,.zip" multiple>
+                
+                <div id="htmlFileList" class="file-list"></div>
+                
+                <div class="options">
+                    <div class="option-item">
+                        <input type="checkbox" id="caseInsensitive">
+                        <label for="caseInsensitive">Case-insensitive matching</label>
+                    </div>
+                    <div class="option-item">
+                        <input type="checkbox" id="singleZip" checked>
+                        <label for="singleZip">Download all into one ZIP</label>
+                    </div>
+                </div>
+                
+                <button class="adapt-button" id="adaptButton" disabled>
+                    Language Adapt
+                </button>
+                
+                <div id="progressContainer"></div>
+            </div>
+            <div class="right-column">
+                <h2 class="section-title">
+                    <span>Upload Translation Table</span>
+                    <a style="text-decoration: none; color: gray; font-size: 13px;" href="sample.xlsx" download>(sample XLSX)</a>
+                    <button id="aiTranslateBtn" class="ai-translate-btn" disabled>AI Translate</button>
+                </h2>
+
+                <div class="drop-zone" id="xlsxDropZone">
+                    <div class="drop-zone-icon">📊</div>
+                    <div class="drop-zone-text">
+                        Drag & drop .xlsx file here<br>
+                        <small>or click to browse</small>
+                    </div>
+                </div>
+                <input type="file" id="xlsxFileInput" accept=".xlsx">
+                
+                <div id="xlsxFileList" class="file-list"></div>
+                
+				<div id="languagesContainer" class="languages-container" style="display: none;">
+					<div class="languages-label">
+						<button id="selectAllBtn" style="font-size:12px; background:#6366f1; color:white; border:none; border-radius:6px; padding:4px 8px; cursor:pointer;">
+							Deselect All Languages
+						</button>
+					</div>
+					<div class="language-tags" id="languageTags"></div>
+				</div>
+                
+                <div id="xlsxPreview"></div>
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            htmlFiles: [],
+            xlsxFile: null,
+            xlsxData: null,
+            languages: [],
+            selectedLanguages: new Set(),
+            originalColumn: null,
+            extractedTexts: [],
+            translatedData: null,
+            isTranslationMode: false
+        };
+
+        const LANGUAGE_CODES = [
+            'AR', 'AT', 'AU', 'BE', 'CA', 'CH', 'CI', 'CL', 'CO', 'CR', 'CY', 'CZ', 'DE', 'DK', 'EE', 
+            'ESEN', 'ESES', 'FI', 'FR', 'GB', 'GR', 'HK', 'HR', 'HU', 'ID', 'IE', 'KE', 'LB', 'LT', 
+            'LU', 'LV', 'MT', 'MX', 'MY', 'NG', 'NL', 'NZ', 'PA', 'PE', 'PH', 'PL', 'PT', 'QA', 'RO', 
+            'SE', 'SK', 'TH', 'TW', 'US', 'UY', 'VE', 'VN', 'ZA'
+        ];
+
+        function initializeDropZones() {
+            setupDropZone('htmlDropZone', 'htmlFileInput', handleHtmlFiles, true);
+            setupDropZone('xlsxDropZone', 'xlsxFileInput', handleXlsxFile, false);
+        }
+
+        function setupDropZone(dropZoneId, fileInputId, handler, multiple) {
+            const dropZone = document.getElementById(dropZoneId);
+            const fileInput = document.getElementById(fileInputId);
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    if (multiple) {
+                        handler(Array.from(e.target.files));
+                    } else {
+                        handler(e.target.files[0]);
+                    }
+                }
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length > 0) {
+                    if (multiple) {
+                        handler(Array.from(e.dataTransfer.files));
+                    } else {
+                        handler(e.dataTransfer.files[0]);
+                    }
+                }
+            });
+        }
+
+        async function handleHtmlFiles(files) {
+            const validTypes = ['text/html', 'application/zip', 'application/x-zip-compressed'];
+            const validExtensions = ['.html', '.zip'];
+            
+            const validFiles = files.filter(file => {
+                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                return validTypes.includes(file.type) || validExtensions.includes(fileExtension);
+            });
+
+            if (validFiles.length === 0) {
+                showError('htmlFileList', 'Please upload .html or .zip files');
+                return;
+            }
+
+            state.htmlFiles = state.htmlFiles.concat(validFiles);
+
+            const fileList = document.getElementById('htmlFileList');
+            fileList.innerHTML = '';
+            
+            state.htmlFiles.forEach((file, index) => {
+                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                fileList.innerHTML += `
+                    <div class="file-item" data-index="${index}">
+                        <button class="remove-file-btn" title="Remove file">×</button>
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-type">${fileExtension === '.zip' ? 'ZIP' : 'HTML'}</span>
+                    </div>
+                `;
+            });
+
+            fileList.querySelectorAll('.remove-file-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const item = e.target.closest('.file-item');
+                    const index = parseInt(item.getAttribute('data-index'));
+                    state.htmlFiles.splice(index, 1);
+                    item.remove();
+                    checkReadyState();
+                });
+            });
+
+            await extractTextsFromFiles(validFiles);
+            checkReadyState();
+            clearResults();
+        }
+
+        async function extractTextsFromFiles(files) {
+            const textsSet = new Set();
+            
+            for (const file of files) {
+                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                
+                if (fileExtension === '.html') {
+                    const content = await file.text();
+                    const texts = extractTextsFromHtml(content);
+                    texts.forEach(text => textsSet.add(text));
+                } else if (fileExtension === '.zip') {
+                    const zip = new JSZip();
+                    const zipContent = await zip.loadAsync(file);
+                    
+                    for (const [fileName, fileData] of Object.entries(zipContent.files)) {
+                        if (!fileData.dir && fileName.toLowerCase().endsWith('.html')) {
+                            const htmlContent = await fileData.async('string');
+                            const texts = extractTextsFromHtml(htmlContent);
+                            texts.forEach(text => textsSet.add(text));
+                        }
+                    }
+                }
+            }
+            
+            state.extractedTexts = Array.from(textsSet).filter(text => text.length > 0);
+        }
+
+        function extractTextsFromHtml(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const texts = new Set();
+            
+            const textNodes = getTextNodes(doc.body);
+            textNodes.forEach(node => {
+                const text = node.textContent.trim();
+                if (text.length > 0) {
+                    texts.add(text);
+                }
+            });
+            
+            const attributesToExtract = ['alt', 'title', 'placeholder', 'value'];
+            const allElements = doc.querySelectorAll('*');
+            
+            allElements.forEach(element => {
+                attributesToExtract.forEach(attr => {
+                    if (element.hasAttribute(attr)) {
+                        const attrValue = element.getAttribute(attr).trim();
+                        if (attrValue.length > 0) {
+                            texts.add(attrValue);
+                        }
+                    }
+                });
+            });
+            
+            return Array.from(texts);
+        }
+
+        async function handleXlsxFile(file) {
+            if (!file.name.endsWith('.xlsx')) {
+                showError('xlsxFileList', 'Please upload a .xlsx file');
+                return;
+            }
+
+            state.xlsxFile = file;
+
+            const fileList = document.getElementById('xlsxFileList');
+            fileList.innerHTML = `
+                <div class="file-item">
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-type">XLSX</span>
+                </div>
+            `;
+
+            try {
+                await parseXlsxFile(file);
+                checkReadyState();
+                
+                if (state.htmlFiles.length > 0 && document.getElementById('resultsContainer').innerHTML.includes('results')) {
+                    processLocalization();
+                }
+            } catch (error) {
+                showError('xlsxPreview', `Error parsing XLSX: ${error.message}`);
+            }
+        }
+
+        async function parseXlsxFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                        if (jsonData.length < 2) {
+                            reject(new Error('XLSX file must have at least 2 rows (header + data)'));
+                            return;
+                        }
+
+                        const headers = jsonData[0].map(h => String(h).trim());
+                        
+                        const originalIndex = 0;
+                        const originalColumnName = headers[originalIndex];
+
+                        const languages = headers.filter((h, i) => i !== originalIndex && h.length > 0);
+
+                        if (languages.length === 0) {
+                            reject(new Error('No language columns found in XLSX'));
+                            return;
+                        }
+
+                        const translations = {};
+                        languages.forEach(lang => {
+                            translations[lang] = {};
+                        });
+
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            const original = String(row[originalIndex] || '').trim();
+                            
+                            if (!original) continue;
+
+                            headers.forEach((header, colIndex) => {
+                                if (colIndex !== originalIndex && header.length > 0) {
+                                    const translated = String(row[colIndex] || '').trim();
+                                    if (translated) {
+                                        translations[header][original] = translated;
+                                    }
+                                }
+                            });
+                        }
+
+                        state.xlsxData = translations;
+                        state.languages = languages;
+                        state.originalColumn = originalIndex;
+                        
+                        state.selectedLanguages = new Set(languages);
+
+                        displayLanguageTags();
+                        displayXlsxPreview(jsonData.slice(0, 11), headers);
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                reader.onerror = () => reject(new Error('Failed to read XLSX file'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function displayLanguageTags() {
+			const container = document.getElementById('languagesContainer');
+			const tagsContainer = document.getElementById('languageTags');
+			
+			container.style.display = 'block';
+			tagsContainer.innerHTML = '';
+			
+			state.languages.forEach(lang => {
+				const tag = document.createElement('div');
+				tag.className = 'language-tag' + (state.selectedLanguages.has(lang) ? ' active' : '');
+				tag.textContent = lang;
+
+				tag.addEventListener('click', () => {
+					if (state.selectedLanguages.has(lang)) {
+						state.selectedLanguages.delete(lang);
+						tag.classList.remove('active');
+					} else {
+						state.selectedLanguages.add(lang);
+						tag.classList.add('active');
+					}
+					checkReadyState();
+				});
+
+				tagsContainer.appendChild(tag);
+			});
+
+			const selectAllBtn = document.getElementById('selectAllBtn');
+			let allSelected = true;
+
+			selectAllBtn.onclick = () => {
+				allSelected = !allSelected;
+				if (allSelected) {
+					state.selectedLanguages = new Set(state.languages);
+					selectAllBtn.textContent = "Deselect All Languages";
+				} else {
+					state.selectedLanguages.clear();
+					selectAllBtn.textContent = "Select All Languages";
+				}
+
+				document.querySelectorAll('#languageTags .language-tag').forEach(tag => {
+					if (allSelected) tag.classList.add('active');
+					else tag.classList.remove('active');
+				});
+
+				checkReadyState();
+			};
+		}
+
+        function displayXlsxPreview(data, headers) {
+            const preview = document.getElementById('xlsxPreview');
+            
+            if (data.length <= 1) {
+                preview.innerHTML = '<div class="info-message">Preview will appear here after upload</div>';
+                return;
+            }
+
+            let html = '<div class="preview-table"><table><thead><tr>';
+            
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            for (let i = 1; i < data.length && i < 11; i++) {
+                html += '<tr>';
+                data[i].forEach(cell => {
+                    html += `<td title="${String(cell)}">${String(cell).substring(0, 50)}</td>`;
+                });
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            preview.innerHTML = html;
+        }
+
+        function checkReadyState() {
+            const adaptButton = document.getElementById('adaptButton');
+            adaptButton.disabled = !(state.htmlFiles.length > 0 && state.xlsxData && state.selectedLanguages.size > 0);
+            
+            const aiTranslateBtn = document.getElementById('aiTranslateBtn');
+            aiTranslateBtn.disabled = state.htmlFiles.length === 0;
+        }
+
+        async function processLocalization() {
+		    showProgress('Processing localization...');
+		    clearResults();
+		
+		    try {
+		        const results = [];
+		        const selectedLangs = Array.from(state.selectedLanguages);
+		        const singleZip = document.getElementById('singleZip').checked;
+		
+				if (singleZip) {
+					const masterZip = new JSZip();
+
+					for (const htmlFile of state.htmlFiles) {
+						const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
+						const isZip = fileExtension === '.zip';
+						const baseName = htmlFile.name.replace(/\.[^/.]+$/, '');
+
+						if (isZip) {
+							const zipContent = await new JSZip().loadAsync(htmlFile);
+
+							for (const lang of selectedLangs) {
+								const bannerZip = new JSZip();
+
+								for (const [fileName, fileData] of Object.entries(zipContent.files)) {
+									if (fileData.dir) continue;
+
+									if (fileName.toLowerCase().endsWith('.html')) {
+										const htmlContent = await fileData.async('string');
+										const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+										bannerZip.file(fileName, localizedHtml);
+									} else {
+										const content = await fileData.async('uint8array');
+										bannerZip.file(fileName, content);
+									}
+								}
+
+								const bannerBlob = await bannerZip.generateAsync({
+									type: 'uint8array',
+									compression: 'DEFLATE',
+									compressionOptions: { level: 5 }
+								});
+
+								masterZip.file(`All_Languages/${lang}/${baseName}.zip`, bannerBlob);
+							}
+						} else {
+							const htmlContent = await htmlFile.text();
+							for (const lang of selectedLangs) {
+								const bannerZip = new JSZip();
+								const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+								bannerZip.file(`${baseName}.html`, localizedHtml);
+
+								const bannerBlob = await bannerZip.generateAsync({
+									type: 'uint8array',
+									compression: 'DEFLATE',
+									compressionOptions: { level: 5 }
+								});
+
+								masterZip.file(`All_Languages/${lang}/${baseName}.zip`, bannerBlob);
+							}
+						}
+					}
+
+					const blob = await masterZip.generateAsync({
+						type: 'blob',
+						compression: 'DEFLATE',
+						compressionOptions: { level: 5 }
+					});
+					saveAs(blob, 'All_Languages.zip');
+					results.push({ name: 'All_Languages.zip', type: 'zip' });
+				}
+
+		        else {
+		            for (const htmlFile of state.htmlFiles) {
+		                const fileExtension = htmlFile.name.substring(htmlFile.name.lastIndexOf('.')).toLowerCase();
+		                const isZip = fileExtension === '.zip';
+		
+		                if (isZip) {
+		                    const zipResults = await processZipFile(htmlFile, selectedLangs);
+		                    results.push(...zipResults);
+		                } else {
+		                    const htmlResults = await processHtmlFile(htmlFile, selectedLangs);
+		                    results.push(...htmlResults);
+		                }
+		            }
+		        }
+		
+		        showResults(results);
+		        hideProgress();
+		    } catch (error) {
+		        showError('resultsContainer', `Processing error: ${error.message}`);
+		        hideProgress();
+		    }
+		}
+
+        async function processHtmlFile(file, selectedLangs) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                
+                reader.onload = async (e) => {
+                    const htmlContent = e.target.result;
+                    const results = [];
+
+                    for (const lang of selectedLangs) {
+                        const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+                        const fileName = file.name.replace('.html', '') + `_${lang}.html`;
+                        
+                        const blob = new Blob([localizedHtml], { type: 'text/html;charset=utf-8' });
+                        saveAs(blob, fileName);
+                        
+                        results.push({ name: fileName, type: 'html' });
+                    }
+
+                    resolve(results);
+                };
+
+                reader.readAsText(file);
+            });
+        }
+
+        async function processZipFile(file, selectedLangs) {
+            const zip = new JSZip();
+            const zipContent = await zip.loadAsync(file);
+            const results = [];
+
+            for (const lang of selectedLangs) {
+                const langZip = new JSZip();
+
+                for (const [fileName, fileData] of Object.entries(zipContent.files)) {
+                    if (fileData.dir) {
+                        langZip.folder(fileName);
+                        continue;
+                    }
+
+                    if (fileName.toLowerCase().endsWith('.html')) {
+                        const htmlContent = await fileData.async('string');
+                        const localizedHtml = replaceTextInHtml(htmlContent, state.xlsxData[lang]);
+                        langZip.file(fileName, localizedHtml);
+                    } else {
+                        const content = await fileData.async('uint8array');
+                        langZip.file(fileName, content);
+                    }
+                }
+
+                const langZipBlob = await langZip.generateAsync({
+				    type: 'blob',
+				    compression: 'DEFLATE',
+				    compressionOptions: { level: 5 }
+				});
+				
+                const zipName = file.name.replace('.zip', '') + `_${lang}.zip`;
+                
+                saveAs(langZipBlob, zipName);
+                results.push({ name: zipName, type: 'zip' });
+            }
+
+            return results;
+        }
+
+        function replaceTextInHtml(html, translations) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const caseInsensitive = document.getElementById('caseInsensitive').checked;
+
+            const sortedTranslations = Object.entries(translations).sort((a, b) => b[0].length - a[0].length);
+
+            const textNodes = getTextNodes(doc.body);
+            textNodes.forEach(node => {
+                let text = node.textContent;
+                sortedTranslations.forEach(([original, translated]) => {
+                    if (caseInsensitive) {
+                        const regex = new RegExp(escapeRegex(original), 'gi');
+                        text = text.replace(regex, translated);
+                    } else {
+                        text = text.split(original).join(translated);
+                    }
+                });
+                node.textContent = text;
+            });
+
+            const attributesToReplace = ['alt', 'title', 'placeholder', 'value'];
+            const allElements = doc.querySelectorAll('*');
+            
+            allElements.forEach(element => {
+                attributesToReplace.forEach(attr => {
+                    if (element.hasAttribute(attr)) {
+                        let attrValue = element.getAttribute(attr);
+                        sortedTranslations.forEach(([original, translated]) => {
+                            if (caseInsensitive) {
+                                const regex = new RegExp(escapeRegex(original), 'gi');
+                                attrValue = attrValue.replace(regex, translated);
+                            } else {
+                                attrValue = attrValue.split(original).join(translated);
+                            }
+                        });
+                        element.setAttribute(attr, attrValue);
+                    }
+                });
+            });
+
+            return doc.documentElement.outerHTML;
+        }
+
+        function getTextNodes(element) {
+            const textNodes = [];
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: (node) => {
+                        const parent = node.parentElement;
+                        if (parent && (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return node.textContent.trim().length > 0 
+                            ? NodeFilter.FILTER_ACCEPT 
+                            : NodeFilter.FILTER_REJECT;
+                    }
+                }
+            );
+
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+
+            return textNodes;
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\                reader.onerror = () => reject(new');
+        }
+
+        function showProgress(message) {
+            const container = document.getElementById('progressContainer');
+            container.innerHTML = `
+                <div class="progress">
+                    <div class="spinner"></div>
+                    <div style="color: #64748b; font-size: 14px;">${message}</div>
+                </div>
+            `;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').innerHTML = '';
+        }
+
+        function showResults(files) {
+            const container = document.getElementById('resultsContainer');
+            
+            let html = '<div class="results"><h3>✓ Processing Complete</h3>';
+            html += `<div class="info-message" style="background: #f0fdf4; border-color: #bbf7d0; color: #15803d;">${files.length} file(s) downloaded successfully</div>`;
+            
+            files.forEach(file => {
+                html += `
+                    <div class="result-item">
+                        <span style="color: #334155; font-weight: 500;">${file.name}</span>
+                        <span class="file-type">${file.type.toUpperCase()}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function clearResults() {
+            document.getElementById('resultsContainer').innerHTML = '';
+        }
+
+        function showError(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="error-message">⚠ ${message}</div>`;
+        }
+
+        function handleAITranslate() {
+            const btn = document.getElementById('aiTranslateBtn');
+            
+            if (state.isTranslationMode) {
+                downloadTranslationExcel();
+            } else {
+                showLanguageModal();
+            }
+        }
+
+        function showLanguageModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">Select Languages to Translate</div>
+                    <div class="language-grid" id="languageGrid"></div>
+                    <div class="modal-actions">
+                        <button class="modal-btn modal-btn-cancel" onclick="closeLanguageModal()">Cancel</button>
+                        <button class="modal-btn modal-btn-confirm" onclick="confirmTranslation()">OK</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const grid = document.getElementById('languageGrid');
+            LANGUAGE_CODES.forEach(lang => {
+                const label = document.createElement('label');
+                label.className = 'language-checkbox';
+                label.innerHTML = `
+                    <input type="checkbox" value="${lang}">
+                    <span>${lang}</span>
+                `;
+                
+                label.addEventListener('click', function(e) {
+                    if (e.target.tagName !== 'INPUT') {
+                        const checkbox = this.querySelector('input');
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    this.classList.toggle('selected', this.querySelector('input').checked);
+                });
+                
+                grid.appendChild(label);
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeLanguageModal();
+                }
+            });
+        }
+
+        window.closeLanguageModal = function() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        window.confirmTranslation = async function() {
+            const selectedLangs = Array.from(document.querySelectorAll('#languageGrid input:checked'))
+                .map(input => input.value);
+            
+            if (selectedLangs.length === 0) {
+                alert('Please select at least one language');
+                return;
+            }
+            
+            closeLanguageModal();
+            await performTranslation(selectedLangs);
+        }
+
+        async function performTranslation(languages) {
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'translation-progress';
+            progressDiv.id = 'translationProgressDiv';
+            progressDiv.innerHTML = `
+                <div style="font-weight: 600; color: #15803d; margin-bottom: 10px;">Translating texts...</div>
+                <div>Progress: <span id="translationProgress">0</span>/${languages.length} languages</div>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" id="progressBarFill" style="width: 0%"></div>
+                </div>
+            `;
+            
+            const preview = document.getElementById('xlsxPreview');
+            preview.innerHTML = '';
+            preview.appendChild(progressDiv);
+            
+            const translationData = {
+                'Original': state.extractedTexts
+            };
+            
+            for (let i = 0; i < languages.length; i++) {
+                const lang = languages[i];
+                translationData[lang] = [];
+                
+                for (const text of state.extractedTexts) {
+                    const translated = await translateText(text, lang);
+                    translationData[lang].push(translated);
+                }
+                
+                document.getElementById('translationProgress').textContent = i + 1;
+                document.getElementById('progressBarFill').style.width = ((i + 1) / languages.length * 100) + '%';
+            }
+            
+            state.translatedData = translationData;
+            state.languages = languages;
+            state.selectedLanguages = new Set(languages);
+            
+            state.xlsxData = {};
+            languages.forEach(lang => {
+                state.xlsxData[lang] = {};
+                state.extractedTexts.forEach((original, idx) => {
+                    state.xlsxData[lang][original] = translationData[lang][idx];
+                });
+            });
+            
+            displayTranslationTable(translationData, ['Original', ...languages]);
+            
+            const btn = document.getElementById('aiTranslateBtn');
+            btn.textContent = 'Download Excel';
+            btn.classList.add('download-mode');
+            state.isTranslationMode = true;
+            
+            progressDiv.remove();
+            checkReadyState();
+        }
+
+        async function translateText(text, targetLang) {
+            // TODO: Replace with actual Google Translate API
+            // Placeholder: returns text with language prefix
+            await new Promise(resolve => setTimeout(resolve, 50));
+            return `[${targetLang}] ${text}`;
+        }
+
+        function displayTranslationTable(data, headers) {
+            const preview = document.getElementById('xlsxPreview');
+            
+            let html = '<div class="preview-table"><table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            const rowCount = Math.min(data['Original'].length, 10);
+            for (let i = 0; i < rowCount; i++) {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const text = data[header][i] || '';
+                    html += `<td title="${text}">${text.substring(0, 50)}</td>`;
+                });
+                html += '</tr>';
+            }
+            
+            html += '</tbody></table></div>';
+            preview.innerHTML = html;
+            
+            displayLanguageTags();
+        }
+
+        function downloadTranslationExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            const headers = ['Original', ...state.languages];
+            const rows = [headers];
+            
+            state.extractedTexts.forEach((original, idx) => {
+                const row = [original];
+                state.languages.forEach(lang => {
+                    row.push(state.translatedData[lang][idx] || '');
+                });
+                rows.push(row);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, 'Translations');
+            
+            XLSX.writeFile(wb, 'translations.xlsx');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDropZones();
+            
+            document.getElementById('adaptButton').addEventListener('click', processLocalization);
+            document.getElementById('aiTranslateBtn').addEventListener('click', handleAITranslate);
+        });
+    </script>
+</body>
+</html>
